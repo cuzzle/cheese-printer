@@ -9,6 +9,7 @@ Author:  Tony and Richard
 #include <Pixy.h>
 
 #define spd 600 //ms between pulses
+#define slowspd 2000
 #define mm *40 // 80 steps per millimeter
 #define pulseDelay 70 //ms delay
 
@@ -18,6 +19,12 @@ Pixy pixy; //load the pixi cam
 long int xpos, ypos, zpos; //variables to hold current positions
 int outputs[6] = { 2, 3, 4, 5, 6, 7 }; //Stepper ports
 int endstops[3] = { 14, 15, 16 }; //endstops on A0, A1, A2
+
+bool crackalackin = true; //Are their crackers
+int crackers[50][2];
+uint16_t numCrackers = 0;
+char buf[32]; //for printing
+
 void setup() {
 	Serial.begin(9600);
 	cheese.attach(8); //servo data is on pin 8
@@ -29,7 +36,7 @@ void setup() {
 		pinMode(endstops[a], INPUT_PULLUP); //endstop inputs
 	}
 
-	//pixy.init(); //probably won't work until we connect it.
+	pixy.init(); //probably won't work until we connect it.
 
 	homePrinter();
 	movexy(5 mm, 5 mm); //pull back from the endstops
@@ -43,22 +50,43 @@ void loop() {
 
 	//getCrackers();
 	//delay(2000);
-	drawCheeseSquare(55, 55, 100, 200);
-
+	//printCrackers();
+	//drawCheeseSquare(55, 55, 50, 50);
+	applyCheese(15, 45);
+	applyCheese(46, 90);
+	applyCheese(15, 33);
+	applyCheese(100, 222);
 }
 
-void getCrackers() { //method checks pixycam for cracker blocks and prints the location, will need to change to return the values to print
+void getCrackers() { //method checks pixycam for cracker blocks and add them to the cracker array
 	uint16_t blocks;
 	int i;
 	blocks = pixy.getBlocks();
 	if (blocks) {
-		for (i = 0; i < blocks; i++)
+		for (i = 0; i < numCrackers; i++)
 		{
-			Serial.print("Cracker found at: ");
-			Serial.print(pixy.blocks[i].x);
-			Serial.print(" , ");
-			Serial.println(pixy.blocks[i].y);
+			//pixy.blocks[i].print(); //prints info to serial
+			crackers[i][0] = pixy.blocks[i].x;
+			crackers[i][1] = pixy.blocks[i].y;
 		}
+		numCrackers = blocks;
+	}
+	else numCrackers = 0;
+
+}
+
+void printCrackers()
+{
+	Serial.print("Number of Crackers found: ");
+	Serial.println(numCrackers);
+	for (int i = 0; i < numCrackers; i++)
+	{
+		Serial.print("Cracker:");
+		Serial.print(i);
+		Serial.print(" x:");
+		Serial.print(crackers[i][0]);
+		Serial.print(" y:");
+		Serial.println(crackers[i][1]);
 	}
 }
 
@@ -111,6 +139,14 @@ void squeezeCheese(bool on) {
 	delay(150);  //servo move delay need to test this
 }
 
+
+void moveto(long int x, long int y)
+{
+	movexy(x - xpos, y - ypos);
+
+}
+
+
 void movexy(long int x, long int y) { //moves to a new x and y position
 	Serial.println("Moving XY");
 	Serial.print("x: ");
@@ -146,7 +182,7 @@ void movexy(long int x, long int y) { //moves to a new x and y position
 	float ycount = 0;
 	long int xset = 0;
 	long int yset = 0;
-	while (yset != y || xset != x) { //haven't arrived yet
+	while (yset != y || xset != x) { 
 		xcount++;
 		ycount++;
 		if (xcount >= xstep && xset != x) {
@@ -178,6 +214,16 @@ void movez(long int z) {
 	}
 }
 
+void movezslow(long int z) {
+	Serial.println("Moving Z");
+	zpos += z;
+	bool zdir = z > 1;
+	for (int a = 0; a < abs(z); a++) {
+		pulsez(zdir);
+		delayMicroseconds(slowspd);
+	}
+}
+
 void home() {
 	movez(-zpos);
 	movexy(-xpos, -ypos);
@@ -190,7 +236,7 @@ void pulsex(bool dir) {
 	digitalWrite(2, 1);
 }
 void pulsey(bool dir) {
-	digitalWrite(5, !dir);
+	digitalWrite(5, dir);
 	digitalWrite(4, 0);
 	delayMicroseconds(pulseDelay);
 	digitalWrite(4, 1);
@@ -205,8 +251,16 @@ void pulsez(bool dir) {
 void applyCheese(long int x, long int y)
 {
 	//TODO: make sure it's at the right location
-	movexy(x, y);
+	moveto(x mm, y mm);
+	movez(25 mm);
 	squeezeCheese(1);
-	movez(10); //move the nozzle up while dispensing cheese
+	movezslow(-25 mm); //move the nozzle up while dispensing cheese
 	squeezeCheese(0);
+}
+
+void camToPrintbed()//convert from pixy cam coordinates to printer bed
+{
+	
+
+
 }
