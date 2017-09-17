@@ -21,5 +21,8 @@
     <ClInclude Include="__vm\.CheesePrinter.vsarduino.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="__vm\.cheese-printer.vsarduino.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
